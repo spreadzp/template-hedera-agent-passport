@@ -58,9 +58,9 @@ describe("AgentPassportNFT + AgentEventLog", () => {
     const logAsOther = await viem.getContractAt("AgentEventLog", log.address, {
       client: { wallet: other },
     });
-    await expect(
-      logAsOther.write.emitTopic(["x", "0x00"]),
-    ).rejects.toThrow(/NotWriter/);
+    await expect(logAsOther.write.emitTopic(["x", "0x00"])).rejects.toThrow(
+      /NotWriter/,
+    );
   });
 
   it("revoke marks passport + emits audit event", async () => {

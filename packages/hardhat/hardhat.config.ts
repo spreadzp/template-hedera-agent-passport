@@ -29,7 +29,8 @@ export default defineConfig({
     },
     hederaMainnet: {
       type: "http",
-      url: process.env.HEDERA_MAINNET_RPC_URL ?? "https://mainnet.hashio.io/api",
+      url:
+        process.env.HEDERA_MAINNET_RPC_URL ?? "https://mainnet.hashio.io/api",
       chainId: 295,
       accounts: process.env.HEDERA_PRIVATE_KEY
         ? [process.env.HEDERA_PRIVATE_KEY]

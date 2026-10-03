@@ -51,10 +51,13 @@ async function main() {
     ] as [`0x${string}` | string, `0x${string}`]);
     console.log(`emitTopic tx: ${emitHash}`);
   } catch {
-    console.log("emitTopic skipped (writer is the passport contract — expected).");
+    console.log(
+      "emitTopic skipped (writer is the passport contract — expected).",
+    );
   }
 
-  const net = (await viem.getPublicClient()).chain?.id === 295 ? "mainnet" : "testnet";
+  const net =
+    (await viem.getPublicClient()).chain?.id === 295 ? "mainnet" : "testnet";
   const links = [
     `https://hashscan.io/${net}/transaction/${mintHash}`,
     ...(emitHash ? [`https://hashscan.io/${net}/transaction/${emitHash}`] : []),

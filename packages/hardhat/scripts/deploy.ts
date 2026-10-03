@@ -18,7 +18,9 @@ async function main() {
   const [deployer] = await viem.getWalletClients();
   const admin = deployer.account.address;
 
-  console.log(`Deploying from ${admin} on chain ${await publicClient.getChainId()}…`);
+  console.log(
+    `Deploying from ${admin} on chain ${await publicClient.getChainId()}…`,
+  );
 
   // 1. Event log — writer will be the passport contract (set below).
   const log = await viem.deployContract("AgentEventLog", [admin]);
