@@ -77,6 +77,128 @@ hedera-agent-passport/
 └── AGENTS.md                 # guide for AI coding agents
 ```
 
+## How it works
+
+### System overview
+
+```mermaid
+flowchart LR
+    dev([Developer]) -->|"npm create scaffold-hbar"| tpl["This template"]
+    tpl -->|"npm run deploy"| deploy["deploy.ts<br/>(Hardhat + viem)"]
+    deploy -->|"1. deploy"| log["AgentEventLog<br/>append-only topics"]
+    deploy -->|"2. deploy + setWriter"| nft["AgentPassportNFT<br/>ERC-721 passport"]
+    deploy -->|"writes"| env[".env +<br/>deployedContracts.ts"]
+    dev -->|"npm run dev"| api["Hono API :3000"]
+    api -->|"viem write"| nft
+    api -->|"viem read"| nft
+    nft -->|"emitTopic (internal)"| log
+    ui["Minimal UI<br/>public/index.html"] -->|"fetch"| api
+    nft & log -->|"verifiable txs / events"| hs([Hashscan + Mirror Node])
+```
+
+Key wiring decisions:
+
+- `AgentEventLog.writer` is set to the **passport contract address** at
+  deploy — EOAs cannot call `emitTopic` directly; writes only happen as
+  a side-effect of passport operations. This guarantees the audit log
+  can never be written out-of-band.
+- The API holds the **operator key** (`HEDERA_PRIVATE_KEY`) and pays
+  gas for every write — callers never need a wallet.
+- Attestations are passports too: `attestSnapshot` mints a token whose
+  on-chain `SnapshotAttestation` struct binds `snapshotHash → tokenId`.
+
+### Contract model
+
+```mermaid
+classDiagram
+    direction LR
+    class AgentPassportNFT {
+        <<ERC721 + AccessControl>>
+        +uint256 _nextId
+        +mapping tierOf
+        +mapping revoked
+        +mapping attestations
+        +mapping hashToToken
+        +mint(to, uri, tier) uint256
+        +revoke(id, reason)
+        +attestSnapshot(snapshotHash, domain, score, grade) uint256
+        +revokeSnapshot(tokenId, reason)
+        +verifySnapshot(snapshotHash) (tokenId, score, timestamp, valid)
+        +getPassportInfo(id) (owner, tier, isRevoked, uri)
+        +getAttestation(tokenId) SnapshotAttestation
+        +tokenURI(id) string
+    }
+    class SnapshotAttestation {
+        <<struct>>
+        +bytes32 snapshotHash
+        +string domain
+        +uint8 score
+        +string grade
+        +uint64 attestedAt
+        +bool revoked
+    }
+    class AgentEventLog {
+        <<append-only>>
+        +address writer
+        +mapping seq
+        +setWriter(w)
+        +emitTopic(topic, payload)
+    }
+    class Roles {
+        <<AccessControl>>
+        +MINTER_ROLE
+        +REVOKER_ROLE
+        +DEFAULT_ADMIN_ROLE
+    }
+    AgentPassportNFT --> AgentEventLog : only writer
+    AgentPassportNFT o-- SnapshotAttestation
+    AgentPassportNFT ..> Roles : onlyRole
+    AgentEventLog ..> AgentPassportNFT : writer = passport addr
+```
+
+Event log topics (each `emitTopic` appends `TopicEvent(topic, seq++, payload, timestamp)`):
+
+| Contract call    | Topic       | Payload                                               |
+| ---------------- | ----------- | ----------------------------------------------------- |
+| `mint`           | `directory` | `("passport_issued", id, to, tier)`                   |
+| `revoke`         | `audit`     | `("passport_revoked", id, reason)`                    |
+| `attestSnapshot` | `trust`     | `("snapshot_attested", tokenId, hash, domain, score)` |
+| `revokeSnapshot` | `trust`     | `("snapshot_revoked", tokenId, reason)`               |
+
+### Request flow — mint + attestation
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User / Agent
+    participant UI as UI (index.html)
+    participant API as Hono API
+    participant NFT as AgentPassportNFT
+    participant LOG as AgentEventLog
+    participant HS as Hashscan
+
+    U->>UI: fill mint form (to, uri, tier)
+    UI->>API: POST /passport/mint
+    API->>NFT: mint(to, uri, tier) — operator pays gas
+    NFT->>NFT: _safeMint + tierOf[id]=tier
+    NFT->>LOG: emitTopic("directory", payload)
+    NFT-->>API: PassportMinted + tx hash
+    API-->>UI: {tx, hashscan link}
+    UI->>HS: reviewer verifies tx
+
+    U->>API: POST /attestation {domain, score, grade}
+    API->>API: snapshotHash = keccak256(domain:ts)
+    API->>NFT: attestSnapshot(hash, domain, score, grade)
+    NFT->>NFT: mint attestation token + store struct
+    NFT->>LOG: emitTopic("trust", payload)
+    NFT-->>API: SnapshotAttested event → tokenId
+    API-->>U: {tx, tokenId, snapshotHash, link}
+
+    U->>API: GET /attestation/{hash}
+    API->>NFT: verifySnapshot(hash) — eth_call, free
+    API-->>U: {tokenId, score, timestamp, valid}
+```
+
 ## API
 
 | Method | Route                | What it does                                           |
@@ -88,6 +210,128 @@ hedera-agent-passport/
 | GET    | `/passport/:id`      | owner, tier, tokenURI, revoked flag                    |
 | GET    | `/attestation/:hash` | `verifySnapshot` → score/timestamp/valid               |
 | GET    | `/`                  | minimal UI (forms → API → Hashscan link)               |
+
+### `GET /health`
+
+Liveness probe — no chain interaction.
+
+```bash
+curl -s http://localhost:3000/health
+# → {"ok":true,"chain":"Hedera Testnet","chainId":296}
+```
+
+### `GET /contracts`
+
+Deployed addresses from `deployedContracts.ts` / env, with Hashscan links.
+
+```bash
+curl -s http://localhost:3000/contracts
+# → {"passport":"0xc7b4…","eventLog":"0x8637…","chainId":296,
+#    "hashscan":{"passport":"https://hashscan.io/testnet/contract/0xc7b4…", …}}
+```
+
+### `POST /passport/mint`
+
+Mints a passport NFT. Operator key signs and pays gas.
+
+| Param  | Type      | Default                   | Constraint          |
+| ------ | --------- | ------------------------- | ------------------- |
+| `to`   | `address` | operator address          | `0x` + 40 hex chars |
+| `uri`  | `string`  | `ipfs://agent-passport/…` | metadata URI        |
+| `tier` | `number`  | `1`                       | `1–4` (bronze→plat) |
+
+```bash
+curl -s -X POST http://localhost:3000/passport/mint \
+  -H 'content-type: application/json' \
+  -d '{"to":"0x48C9b8C9B47f5f324FC091a4A64f933453A49478","tier":2,"uri":"ipfs://agent-passport/api-mint"}'
+# → {"ok":true,"tx":"0xb704…","status":"success","to":"0x48C9…","tier":2,
+#    "hashscan":"https://hashscan.io/testnet/transaction/0xb704…"}
+```
+
+### `POST /attestation`
+
+Attests an off-chain snapshot (readiness scan, benchmark…) on-chain.
+Mints an attestation passport and appends to the `trust` event topic.
+
+| Param          | Type      | Default                       | Constraint    |
+| -------------- | --------- | ----------------------------- | ------------- |
+| `domain`       | `string`  | `example.com`                 | any string    |
+| `score`        | `number`  | `90`                          | `0–100`       |
+| `grade`        | `string`  | `A`                           | e.g. `A`–`F`  |
+| `snapshotHash` | `bytes32` | `keccak256(domain:timestamp)` | `0x` + 64 hex |
+
+```bash
+curl -s -X POST http://localhost:3000/attestation \
+  -H 'content-type: application/json' \
+  -d '{"domain":"agentbadge.xyz","score":92,"grade":"A"}'
+# → {"ok":true,"tx":"0xa405…","status":"success","tokenId":"2",
+#    "snapshotHash":"0x0410f1bc…","hashscan":"https://hashscan.io/testnet/transaction/0xa405…"}
+```
+
+> Re-attesting the same `snapshotHash` reverts `Hash already attested` —
+> attestations are immutable (but can be revoked via `revokeSnapshot`).
+
+### `GET /passport/:id`
+
+Reads passport state — `eth_call`, free, no gas.
+
+```bash
+curl -s http://localhost:3000/passport/1
+# → {"tokenId":"1","owner":"0x48C9…","tokenURI":"ipfs://…",
+#    "tier":1,"revoked":false,"hashscan":"https://hashscan.io/testnet/contract/0xc7b4…"}
+```
+
+404 when the token does not exist.
+
+### `GET /attestation/:hash`
+
+Verifies a snapshot hash against on-chain attestations.
+
+```bash
+curl -s http://localhost:3000/attestation/0x0410f1bc3d71a368ff1e7dd4396c8ee0279bbfd52739919c14e5391740257df3
+# → {"snapshotHash":"0x0410…","tokenId":"2","score":92,
+#    "timestamp":1791017864,"valid":true}
+```
+
+`valid:false` + `tokenId:"0"` means "never attested"; `valid:false` with
+a real `tokenId` means "attested but revoked".
+
+## Contract reference
+
+### `AgentPassportNFT` — writes (operator role required)
+
+| Method                                                                                     | Role    | Description                                                  |
+| ------------------------------------------------------------------------------------------ | ------- | ------------------------------------------------------------ |
+| `mint(address to, string uri, uint8 tier) → uint256 id`                                    | MINTER  | passport NFT; emits `PassportMinted` + `directory` topic     |
+| `revoke(uint256 id, string reason)`                                                        | REVOKER | marks `revoked[id]`; emits `PassportRevoked` + `audit` topic |
+| `attestSnapshot(bytes32 hash, string domain, uint8 score, string grade) → uint256 tokenId` | MINTER  | attestation NFT; reverts on duplicate hash / score>100       |
+| `revokeSnapshot(uint256 tokenId, string reason)`                                           | REVOKER | flags attestation revoked; `trust` topic                     |
+
+### `AgentPassportNFT` — reads (free `eth_call`)
+
+| Method                            | Returns                                     |
+| --------------------------------- | ------------------------------------------- |
+| `ownerOf(id)`                     | token owner (ERC-721)                       |
+| `tokenURI(id)`                    | metadata URI                                |
+| `tierOf(id)`                      | `uint8` tier 1–4                            |
+| `revoked(id)`                     | `bool`                                      |
+| `getPassportInfo(id)`             | `(owner, tier, isRevoked, uri)` in one call |
+| `verifySnapshot(bytes32 hash)`    | `(tokenId, score, timestamp, valid)`        |
+| `getAttestation(uint256 tokenId)` | full `SnapshotAttestation` struct           |
+| `hashToToken(bytes32 hash)`       | `tokenId` (`0` = not attested)              |
+
+### `AgentEventLog`
+
+| Method                                   | Who           | Description                                  |
+| ---------------------------------------- | ------------- | -------------------------------------------- |
+| `emitTopic(string topic, bytes payload)` | `writer` only | appends `TopicEvent`; reverts `NotWriter()`  |
+| `seq(string topic) → uint64`             | anyone        | per-topic sequence counter                   |
+| `writer`                                 | anyone        | current writer (= passport contract)         |
+| `setWriter(address w)`                   | `writer`      | rotate writer (deploy transfers to passport) |
+
+Reading the stream: filter `TopicEvent` logs by block range — mirror
+node `GET /api/v1/contracts/{log}/results/logs` or any JSON-RPC
+`eth_getLogs` call.
 
 ## Environment variables
 
