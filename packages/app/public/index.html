@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Passport — Hedera template</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { max-width: 640px; margin: 3rem auto; padding: 0 1rem; background: #0b0f14; color: #e6edf3; }
+      h1 { font-size: 1.4rem; }
+      .card { border: 1px solid #21262d; border-radius: 10px; padding: 1.25rem; margin-bottom: 1.25rem; background: #0d1117; }
+      label { display: block; font-size: 0.85rem; color: #8b949e; margin: 0.75rem 0 0.25rem; }
+      input, select { width: 100%; box-sizing: border-box; padding: 0.5rem; border-radius: 6px; border: 1px solid #30363d; background: #010409; color: #e6edf3; }
+      button { margin-top: 0.9rem; padding: 0.55rem 1rem; border: 0; border-radius: 6px; background: #238636; color: #fff; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: 0.5; }
+      pre { white-space: pre-wrap; word-break: break-all; font-size: 0.8rem; background: #010409; padding: 0.75rem; border-radius: 6px; }
+      a { color: #58a6ff; }
+      .mono { font-family: ui-monospace, monospace; font-size: 0.8rem; color: #8b949e; }
+    </style>
+  </head>
+  <body>
+    <h1>Agent Passport — Hedera</h1>
+    <p class="mono" id="meta">loading contract info…</p>
+
+    <div class="card">
+      <strong>Mint passport NFT</strong>
+      <label>Recipient address (EVM)</label>
+      <input id="to" placeholder="0x… (empty = operator)" />
+      <label>Token URI</label>
+      <input id="uri" value="ipfs://agent-passport/template" />
+      <label>Tier</label>
+      <select id="tier">
+        <option value="1">1 — bronze</option>
+        <option value="2">2 — silver</option>
+        <option value="3">3 — gold</option>
+        <option value="4">4 — platinum</option>
+      </select>
+      <button id="mint">Mint</button>
+      <pre id="mintOut" hidden></pre>
+    </div>
+
+    <div class="card">
+      <strong>Attest snapshot</strong>
+      <label>Domain</label>
+      <input id="domain" value="example.com" />
+      <label>Score (0–100)</label>
+      <input id="score" type="number" value="90" min="0" max="100" />
+      <label>Grade</label>
+      <input id="grade" value="A" maxlength="1" />
+      <button id="attest">Attest</button>
+      <pre id="attestOut" hidden></pre>
+    </div>
+
+    <div class="card">
+      <strong>Read passport</strong>
+      <label>Token ID</label>
+      <input id="tokenId" type="number" value="1" min="1" />
+      <button id="read">Read</button>
+      <pre id="readOut" hidden></pre>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const show = (id, obj) => {
+        const el = $(id);
+        el.hidden = false;
+        el.textContent = JSON.stringify(obj, null, 2);
+      };
+
+      fetch("/contracts")
+        .then((r) => r.json())
+        .then((d) => {
+          $("meta").innerHTML =
+            `passport <a href="${d.hashscan.passport}">${d.passport}</a><br>` +
+            `eventLog <a href="${d.hashscan.eventLog}">${d.eventLog}</a>`;
+        })
+        .catch(() => ($("meta").textContent = "contract info unavailable"));
+
+      $("mint").onclick = async () => {
+        $("mint").disabled = true;
+        try {
+          const res = await fetch("/passport/mint", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              to: $("to").value || undefined,
+              uri: $("uri").value,
+              tier: Number($("tier").value),
+            }),
+          });
+          show("mintOut", await res.json());
+        } finally {
+          $("mint").disabled = false;
+        }
+      };
+
+      $("attest").onclick = async () => {
+        $("attest").disabled = true;
+        try {
+          const res = await fetch("/attestation", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              domain: $("domain").value,
+              score: Number($("score").value),
+              grade: $("grade").value,
+            }),
+          });
+          show("attestOut", await res.json());
+        } finally {
+          $("attest").disabled = false;
+        }
+      };
+
+      $("read").onclick = async () => {
+        const res = await fetch(`/passport/${$("tokenId").value}`);
+        show("readOut", await res.json());
+      };
+    </script>
+  </body>
+</html>
