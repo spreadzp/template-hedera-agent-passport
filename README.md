@@ -5,6 +5,14 @@
 > (HSCS/EVM analogues of HTS tokens and HCS topics), wired to a small Hono
 > API and a minimal UI. Every action produces a verifiable Hashscan link.
 
+## Demo
+
+https://github.com/user-attachments/assets/33720475-f241-4665-8a04-d48bfb5a892e
+
+2-minute walkthrough — full cycle on a clean machine: `npm create` → tests →
+deploy → mint → verify on Hashscan. All transactions are live on Hedera
+testnet. Also on YouTube: https://youtu.be/0wn19nIiads
+
 ## Use case
 
 AI agents need portable, verifiable identity. This template gives you the
