@@ -15,7 +15,13 @@
     "dev": "npm run dev -w packages/app",
     "format": "prettier --write .",
     "deploy": "npm run deploy -w packages/hardhat",
-    "smoke": "npm run smoke -w packages/hardhat"
+    "smoke": "npm run smoke -w packages/hardhat",
+    "hardhat:compile": "npm run compile -w packages/hardhat",
+    "hardhat:test": "npm run test -w packages/hardhat",
+    "hardhat:deploy": "npm run deploy -w packages/hardhat",
+    "hardhat:chain": "npm exec -w packages/hardhat -- hardhat node",
+    "hardhat:lint": "prettier --check packages/hardhat",
+    "hardhat:format": "prettier --write packages/hardhat"
   },
   "devDependencies": {
     "prettier": "^3.3.3"
