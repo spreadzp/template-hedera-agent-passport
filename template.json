@@ -1,13 +1,60 @@
 {
+  "name": "hedera-agent-passport",
+  "description": "Agent passport template for Hedera: ERC-721 passport NFT + on-chain event log, Hono API, agent-ready docs.",
+  "version": "0.1.0",
   "create-scaffold-hbar": {
     "capabilities": {
-      "frontend": ["minimal-html"],
-      "solidityFramework": ["hardhat"],
+      "frontend": ["none"],
+      "solidityFramework": ["none"],
       "packageManager": ["npm"]
     },
     "defaults": {
-      "frontend": "minimal-html",
-      "solidityFramework": "hardhat"
+      "frontend": "none",
+      "solidityFramework": "none",
+      "packageManager": "npm"
+    },
+    "envVars": [
+      {
+        "key": "HEDERA_OPERATOR_ID",
+        "description": "Hedera testnet account (create at https://portal.hedera.com — free testnet HBAR)"
+      },
+      {
+        "key": "HEDERA_PRIVATE_KEY",
+        "description": "ECDSA private key (hex, 0x-prefixed) — works for both SDK and HSCS/EVM calls"
+      },
+      {
+        "key": "HEDERA_NETWORK",
+        "description": "Hedera network: testnet or mainnet"
+      }
+    ],
+    "requirements": {
+      "node": ">=18.0.0"
+    },
+    "outro": {
+      "sections": [
+        {
+          "title": "Next steps",
+          "steps": [
+            {
+              "label": "Configure Hedera testnet credentials",
+              "text": "Copy .env.example to .env and fill HEDERA_OPERATOR_ID + HEDERA_PRIVATE_KEY (free testnet account at https://portal.hedera.com)"
+            },
+            {
+              "label": "Deploy contracts",
+              "command": "{run:deploy}",
+              "text": "Deploys AgentPassportNFT + AgentEventLog to Hedera testnet and prints contract addresses"
+            },
+            {
+              "label": "Start the API",
+              "command": "{run:dev}"
+            },
+            {
+              "label": "Read the agent guide",
+              "text": "See AGENTS.md — repo layout, commands and conventions for AI agents"
+            }
+          ]
+        }
+      ]
     }
   }
 }
