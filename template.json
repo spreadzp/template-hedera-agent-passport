@@ -4,13 +4,19 @@
   "version": "0.1.0",
   "create-scaffold-hbar": {
     "capabilities": {
-      "frontend": ["none"],
-      "solidityFramework": ["none"],
-      "packageManager": ["npm"]
+      "frontend": [
+        "none"
+      ],
+      "solidityFramework": [
+        "hardhat"
+      ],
+      "packageManager": [
+        "npm"
+      ]
     },
     "defaults": {
       "frontend": "none",
-      "solidityFramework": "none",
+      "solidityFramework": "hardhat",
       "packageManager": "npm"
     },
     "envVars": [
@@ -25,6 +31,14 @@
       {
         "key": "HEDERA_NETWORK",
         "description": "Hedera network: testnet or mainnet"
+      },
+      {
+        "key": "PASSPORT_CONTRACT",
+        "description": "AgentPassportNFT address — written by npm run deploy"
+      },
+      {
+        "key": "EVENTLOG_CONTRACT",
+        "description": "AgentEventLog address — written by npm run deploy"
       }
     ],
     "requirements": {

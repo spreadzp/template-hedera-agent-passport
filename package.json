@@ -13,7 +13,9 @@
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev -w packages/app",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "deploy": "npm run deploy -w packages/hardhat",
+    "smoke": "npm run smoke -w packages/hardhat"
   },
   "devDependencies": {
     "prettier": "^3.3.3"
