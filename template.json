@@ -1,0 +1,13 @@
+{
+  "create-scaffold-hbar": {
+    "capabilities": {
+      "frontend": ["minimal-html"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["npm"]
+    },
+    "defaults": {
+      "frontend": "minimal-html",
+      "solidityFramework": "hardhat"
+    }
+  }
+}
