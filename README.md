@@ -16,7 +16,7 @@ smallest working slice of that pattern:
   any off-chain artifact (readiness scan, benchmark, model card) bound
   on-chain with score + grade.
 - **AgentEventLog** — an ordered append-only event stream (`topic → seq →
-  payload`), the EVM analogue of a Hedera Consensus Service topic. Only
+payload`), the EVM analogue of a Hedera Consensus Service topic. Only
   the passport contract can write, so every mint / revoke / attestation
   leaves an immutable audit trail.
 - **packages/app** — a Hono API that wraps the contracts: `mint`,
@@ -79,27 +79,27 @@ hedera-agent-passport/
 
 ## API
 
-| Method | Route                 | What it does                                         |
-| ------ | --------------------- | ---------------------------------------------------- |
-| GET    | `/health`             | liveness + chainId                                   |
-| GET    | `/contracts`          | deployed addresses + Hashscan links                  |
-| POST   | `/passport/mint`      | `{ to?, uri?, tier? }` → mint, returns tx + link     |
-| POST   | `/attestation`        | `{ domain, score, grade }` → attests snapshot on-chain |
-| GET    | `/passport/:id`       | owner, tier, tokenURI, revoked flag                  |
-| GET    | `/attestation/:hash`  | `verifySnapshot` → score/timestamp/valid             |
-| GET    | `/`                   | minimal UI (forms → API → Hashscan link)             |
+| Method | Route                | What it does                                           |
+| ------ | -------------------- | ------------------------------------------------------ |
+| GET    | `/health`            | liveness + chainId                                     |
+| GET    | `/contracts`         | deployed addresses + Hashscan links                    |
+| POST   | `/passport/mint`     | `{ to?, uri?, tier? }` → mint, returns tx + link       |
+| POST   | `/attestation`       | `{ domain, score, grade }` → attests snapshot on-chain |
+| GET    | `/passport/:id`      | owner, tier, tokenURI, revoked flag                    |
+| GET    | `/attestation/:hash` | `verifySnapshot` → score/timestamp/valid               |
+| GET    | `/`                  | minimal UI (forms → API → Hashscan link)               |
 
 ## Environment variables
 
-| Variable             | Required | Purpose                                        |
-| -------------------- | -------- | ---------------------------------------------- |
-| `HEDERA_OPERATOR_ID` | yes      | testnet account `0.0.x` (informational)        |
-| `HEDERA_PRIVATE_KEY` | yes      | ECDSA key `0x…` — signs contract txs           |
-| `HEDERA_NETWORK`     | no       | `testnet` (default) or `mainnet`               |
-| `HEDERA_RPC_URL`     | no       | override Hashio JSON-RPC endpoint              |
-| `PASSPORT_CONTRACT`  | auto     | written by `npm run deploy`                    |
-| `EVENTLOG_CONTRACT`  | auto     | written by `npm run deploy`                    |
-| `PORT`               | no       | API port, default `3000`                       |
+| Variable             | Required | Purpose                                 |
+| -------------------- | -------- | --------------------------------------- |
+| `HEDERA_OPERATOR_ID` | yes      | testnet account `0.0.x` (informational) |
+| `HEDERA_PRIVATE_KEY` | yes      | ECDSA key `0x…` — signs contract txs    |
+| `HEDERA_NETWORK`     | no       | `testnet` (default) or `mainnet`        |
+| `HEDERA_RPC_URL`     | no       | override Hashio JSON-RPC endpoint       |
+| `PASSPORT_CONTRACT`  | auto     | written by `npm run deploy`             |
+| `EVENTLOG_CONTRACT`  | auto     | written by `npm run deploy`             |
+| `PORT`               | no       | API port, default `3000`                |
 
 > ECDSA key required — ED25519 keys can't sign EVM transactions on Hashio.
 > If your account was created with an ED25519 key, create a new testnet

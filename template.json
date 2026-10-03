@@ -4,15 +4,9 @@
   "version": "0.1.0",
   "create-scaffold-hbar": {
     "capabilities": {
-      "frontend": [
-        "none"
-      ],
-      "solidityFramework": [
-        "hardhat"
-      ],
-      "packageManager": [
-        "npm"
-      ]
+      "frontend": ["none"],
+      "solidityFramework": ["hardhat"],
+      "packageManager": ["npm"]
     },
     "defaults": {
       "frontend": "none",

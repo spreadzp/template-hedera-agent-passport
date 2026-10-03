@@ -45,7 +45,7 @@ deployed via Hardhat on HSCS/EVM (chainId 296), wrapped by a Hono API.
 - **ECDSA only**: Hashio JSON-RPC signs with secp256k1. ED25519 operator
   keys will NOT work for deploy/mint.
 - **`writer` permission on AgentEventLog**: after deploy, `writer` is the
-  *passport contract*, not the operator EOA. Direct `emitTopic` from an
+  _passport contract_, not the operator EOA. Direct `emitTopic` from an
   EOA reverts `NotWriter()` — go through `passport.attestSnapshot` /
   `mint` / `revoke` instead (they emit internally).
 - **dotenv load order**: `packages/app/src/hedera.ts` loads `.env` at

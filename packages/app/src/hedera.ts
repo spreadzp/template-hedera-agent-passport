@@ -1,10 +1,18 @@
-import { createPublicClient, createWalletClient, http, defineChain } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  defineChain,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config as dotenv } from "dotenv";
 import { PASSPORT_CONTRACT, EVENTLOG_CONTRACT } from "../deployedContracts.js";
 
 // Load repo-root .env BEFORE reading env vars below (module-init order).
-dotenv({ path: new URL("../../../.env", import.meta.url).pathname, quiet: true });
+dotenv({
+  path: new URL("../../../.env", import.meta.url).pathname,
+  quiet: true,
+});
 
 export const hederaTestnet = defineChain({
   id: 296,
@@ -34,8 +42,7 @@ const network = process.env.HEDERA_NETWORK ?? "testnet";
 export const chain = network === "mainnet" ? hederaMainnet : hederaTestnet;
 export const rpcUrl =
   process.env.HEDERA_RPC_URL ?? chain.rpcUrls.default.http[0];
-export const hashscan =
-  `https://hashscan.io/${network === "mainnet" ? "mainnet" : "testnet"}`;
+export const hashscan = `https://hashscan.io/${network === "mainnet" ? "mainnet" : "testnet"}`;
 
 export const passportAddress = (process.env.PASSPORT_CONTRACT ??
   PASSPORT_CONTRACT) as `0x${string}`;

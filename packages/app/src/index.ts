@@ -42,7 +42,8 @@ app.post("/passport/mint", async (c) => {
   const to = (body.to ?? walletClient.account.address) as `0x${string}`;
   const uri = body.uri ?? "ipfs://agent-passport/template";
   const tier = Number(body.tier ?? 1);
-  if (!/^0x[0-9a-fA-F]{40}$/.test(to)) return c.json({ error: "bad `to`" }, 400);
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to))
+    return c.json({ error: "bad `to`" }, 400);
   if (tier < 1 || tier > 4) return c.json({ error: "tier must be 1-4" }, 400);
 
   try {
@@ -167,10 +168,7 @@ app.get("/passport/:id", async (c) => {
       hashscan: `${hashscan}/contract/${passportAddress}`,
     });
   } catch (e) {
-    return c.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      404,
-    );
+    return c.json({ error: e instanceof Error ? e.message : String(e) }, 404);
   }
 });
 
@@ -178,13 +176,14 @@ app.get("/passport/:id", async (c) => {
 app.get("/attestation/:hash", async (c) => {
   const h = c.req.param("hash") as `0x${string}`;
   try {
-    const [tokenId, score, timestamp, valid] =
-      (await publicClient.readContract({
+    const [tokenId, score, timestamp, valid] = (await publicClient.readContract(
+      {
         abi: passportAbi,
         address: passportAddress,
         functionName: "verifySnapshot",
         args: [h],
-      })) as readonly [bigint, number, bigint, boolean];
+      },
+    )) as readonly [bigint, number, bigint, boolean];
     return c.json({
       snapshotHash: h,
       tokenId: tokenId.toString(),
@@ -193,10 +192,7 @@ app.get("/attestation/:hash", async (c) => {
       valid,
     });
   } catch (e) {
-    return c.json(
-      { error: e instanceof Error ? e.message : String(e) },
-      404,
-    );
+    return c.json({ error: e instanceof Error ? e.message : String(e) }, 404);
   }
 });
 
